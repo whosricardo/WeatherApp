@@ -39,9 +39,13 @@ public class MainViewModel extends AndroidViewModel {
         return weatherList;
     }
 
+    public void refreshWeather() {
+        handler.removeCallbacks(fetchRunnable);
+        fetchAllForecasts();
+    }
+
     private void startFetching() {
         fetchAllForecasts();
-        handler.postDelayed(fetchRunnable, FETCH_INTERVAL);
     }
 
     private void fetchAllForecasts() {
