@@ -1,5 +1,8 @@
 package com.example.findinglogs.view;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -35,8 +38,21 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
         mainViewModel.getWeatherList().observe(this,
                 weathers -> adapter.updateWeathers(weathers));
+    }
 
-        fetchButton.setOnClickListener(v -> mainViewModel.refreshWeather());
+    private void openInFirefox() {
+        String url = "https://www.google.com/search?q=weather";
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        intent.setPackage("org.mozilla.firefox");
+
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            intent.setPackage(null);
+
+            Intent chooser = Intent.createChooser(intent, "Abrir com");
+            startActivity(chooser);
+        }
     }
 
     @Override
