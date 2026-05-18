@@ -69,4 +69,16 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:srcCompat="@android:drawable/ic_popup_sync" />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/openBrowserButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:clickable="true"
+        android:contentDescription="@string/open_weather_browser"
+        app:layout_constraintBottom_toBottomOf="@id/fetchButton"
+        app:layout_constraintEnd_toStartOf="@id/fetchButton"
+        app:layout_constraintTop_toTopOf="@id/fetchButton"
+        app:srcCompat="@android:drawable/ic_menu_view" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
