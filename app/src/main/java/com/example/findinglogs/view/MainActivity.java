@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private final List<Weather> weathers = new ArrayList<>();
     private FloatingActionButton fetchButton;
     private FloatingActionButton openBrowserButton;
+    private EditText citySearchEditText;
 
     private static final String TAG = "MainActivity";
 
@@ -35,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recycler_view_weather);
         fetchButton = findViewById(R.id.fetchButton);
         openBrowserButton = findViewById(R.id.openBrowserButton);
+        citySearchEditText = findViewById(R.id.citySearchEditText);
         adapter = new WeatherListAdapter(this, weathers);
         recyclerView.setAdapter(adapter);
         mainViewModel.getWeatherList().observe(this,
@@ -42,11 +46,23 @@ public class MainActivity extends AppCompatActivity {
 
         fetchButton.setOnClickListener(view -> mainViewModel.refreshWeather());
         openBrowserButton.setOnClickListener(view -> openWeatherInBrowser());
+        citySearchEditText.setOnEditorActionListener((view, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                openWeatherInBrowser();
+                return true;
+            }
+            return false;
+        });
     }
 
     private void openWeatherInBrowser() {
-        String url = "https://www.google.com/search?q=weather";
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        String city = citySearchEditText.getText().toString().trim();
+        String query = city.isEmpty() ? "weather" : "weather " + city;
+        Uri uri = Uri.parse("https://www.google.com/search")
+                .buildUpon()
+                .appendQueryParameter("q", query)
+                .build();
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         startActivity(intent);
     }
 

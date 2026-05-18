@@ -69,6 +69,21 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:srcCompat="@android:drawable/ic_popup_sync" />
 
+    <EditText
+        android:id="@+id/citySearchEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:hint="@string/city_search_hint"
+        android:imeOptions="actionSearch"
+        android:inputType="textCapWords"
+        android:singleLine="true"
+        app:layout_constraintBottom_toTopOf="@id/fetchButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/openBrowserButton"
         android:layout_width="wrap_content"
