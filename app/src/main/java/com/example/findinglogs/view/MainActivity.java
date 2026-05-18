@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // intent implicita(android que decide qual app/componente vai utilizar )
     private void openWeatherInBrowser() {
         String city = citySearchEditText.getText().toString().trim();
         String query = city.isEmpty() ? "weather" : "weather " + city;
