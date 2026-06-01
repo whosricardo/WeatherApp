@@ -1,6 +1,12 @@
 package com.example.findinglogs.view;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,11 +25,13 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    private MainViewModel mainViewModel; // Foi preciso transformar a ViewModel em atributo de classe
     private WeatherListAdapter adapter;
     private final List<Weather> weathers = new ArrayList<>();
     private FloatingActionButton fetchButton;
     private FloatingActionButton openBrowserButton;
     private EditText citySearchEditText;
+    private BroadcastReceiver connectivityReceiver;
 
     private static final String TAG = "MainActivity";
 
@@ -31,9 +39,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        MainViewModel mainViewModel = new ViewModelProvider(this).get(
+        mainViewModel = new ViewModelProvider(this).get(
             MainViewModel.class
         );
+
+        connectivityReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "Broadcast de conectividade recebido");
+            }
+        };
+
         RecyclerView recyclerView = findViewById(R.id.recycler_view_weather);
         fetchButton = findViewById(R.id.fetchButton);
         openBrowserButton = findViewById(R.id.openBrowserButton);
@@ -70,10 +86,38 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    private boolean isDeviceConnected(Context context) {
+        ConnectivityManager connectivityManager = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (connectivityManager == null) {
+            return false;
+        }
+
+        Network network = connectivityManager.getActiveNetwork();
+
+        if (network == null) {
+            return false;
+        }
+
+        NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(network);
+
+        if (networkCapabilities == null) {
+            return false;
+        }
+
+        return networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
         Log.d(TAG, "onStart()");
+
+        IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(connectivityReceiver, intentFilter);
+
+        Log.d(TAG, "connectivity receiver registrado");
     }
 
     @Override
