@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton openBrowserButton;
     private EditText citySearchEditText;
     private BroadcastReceiver connectivityReceiver;
+    private boolean wasConnected = false;
 
     private static final String TAG = "MainActivity";
 
@@ -40,13 +41,22 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mainViewModel = new ViewModelProvider(this).get(
-            MainViewModel.class
-        );
+                MainViewModel.class);
 
+        wasConnected = isDeviceConnected(this);
+
+        // broadcast declaration
         connectivityReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.d(TAG, "Broadcast de conectividade recebido");
+                boolean isConnectedNow = isDeviceConnected(context);
+
+                if (!wasConnected && isConnectedNow) {
+                    Log.d(TAG, "Conexão voltou");
+                    mainViewModel.refreshWeather();
+                }
+
+                wasConnected = isConnectedNow;
             }
         };
 
@@ -57,20 +67,19 @@ public class MainActivity extends AppCompatActivity {
         adapter = new WeatherListAdapter(this, weathers);
         recyclerView.setAdapter(adapter);
         mainViewModel
-            .getWeatherList()
-            .observe(this, weathers -> adapter.updateWeathers(weathers));
+                .getWeatherList()
+                .observe(this, weathers -> adapter.updateWeathers(weathers));
 
         fetchButton.setOnClickListener(view -> mainViewModel.refreshWeather());
         openBrowserButton.setOnClickListener(view -> openWeatherInBrowser());
         citySearchEditText.setOnEditorActionListener(
-            (view, actionId, event) -> {
-                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                    openWeatherInBrowser();
-                    return true;
-                }
-                return false;
-            }
-        );
+                (view, actionId, event) -> {
+                    if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                        openWeatherInBrowser();
+                        return true;
+                    }
+                    return false;
+                });
     }
 
     // Intent implícita: informamos a ação ACTION_VIEW e a URI.
@@ -79,16 +88,16 @@ public class MainActivity extends AppCompatActivity {
         String city = citySearchEditText.getText().toString().trim();
         String query = city.isEmpty() ? "weather" : "weather " + city;
         Uri uri = Uri.parse("https://www.google.com/search")
-            .buildUpon()
-            .appendQueryParameter("q", query)
-            .build();
+                .buildUpon()
+                .appendQueryParameter("q", query)
+                .build();
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         startActivity(intent);
     }
 
     private boolean isDeviceConnected(Context context) {
-        ConnectivityManager connectivityManager = (ConnectivityManager)
-                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager connectivityManager = (ConnectivityManager) context
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
 
         if (connectivityManager == null) {
             return false;
@@ -136,6 +145,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         Log.d(TAG, "onStop");
+
+        unregisterReceiver(connectivityReceiver);
+
+        Log.d(TAG, "connectivity receiver removido");
     }
 
     @Override
