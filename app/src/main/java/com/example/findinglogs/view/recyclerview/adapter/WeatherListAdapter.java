@@ -1,24 +1,20 @@
 package com.example.findinglogs.view.recyclerview.adapter;
 
-
-
 import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.findinglogs.R;
 import com.example.findinglogs.model.model.Weather;
-import com.example.findinglogs.model.util.Logger;
 import com.example.findinglogs.model.util.Utils;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
@@ -26,12 +22,25 @@ import java.util.List;
 
 public class WeatherListAdapter extends RecyclerView.Adapter<WeatherListAdapter.ViewHolder> {
 
+    public interface OnWeatherMonitorClickListener {
+        void onMonitorClick(Weather weather);
+    }
+
     private final Context context;
     private final List<Weather> weathers;
+    private final OnWeatherMonitorClickListener monitorClickListener;
 
     public WeatherListAdapter(Context context, List<Weather> weathers) {
+        this(context, weathers, null);
+    }
+
+    public WeatherListAdapter(
+            Context context,
+            List<Weather> weathers,
+            OnWeatherMonitorClickListener monitorClickListener) {
         this.context = context;
         this.weathers = new ArrayList<>(weathers);
+        this.monitorClickListener = monitorClickListener;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -43,6 +52,7 @@ public class WeatherListAdapter extends RecyclerView.Adapter<WeatherListAdapter.
         private final TextView pressure;
         private final TextView humidity;
         private final ImageView imageView;
+        private final MaterialButton monitorButton;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -54,10 +64,11 @@ public class WeatherListAdapter extends RecyclerView.Adapter<WeatherListAdapter.
             pressure = itemView.findViewById(R.id.pressure);
             humidity = itemView.findViewById(R.id.humidity);
             imageView = itemView.findViewById(R.id.img_view_item);
+            monitorButton = itemView.findViewById(R.id.button_monitor_weather);
         }
 
         public void holdWeather(Weather weather, Context context) {
-            switch (weather.getWeather().get(0).getIcon()){
+            switch (weather.getWeather().get(0).getIcon()) {
                 case "02d":
                     cardView.setCardBackgroundColor(context.getColor(R.color.weather_few_clouds));
                     break;
@@ -116,6 +127,11 @@ public class WeatherListAdapter extends RecyclerView.Adapter<WeatherListAdapter.
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Weather weather = weathers.get(position);
         holder.holdWeather(weather, context);
+        holder.monitorButton.setOnClickListener(view -> {
+            if (monitorClickListener != null) {
+                monitorClickListener.onMonitorClick(weather);
+            }
+        });
     }
 
     @Override
