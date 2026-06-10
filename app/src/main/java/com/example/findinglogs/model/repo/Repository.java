@@ -5,6 +5,7 @@ import android.app.Application;
 
 import com.example.findinglogs.model.model.Weather;
 import com.example.findinglogs.model.repo.local.SharedPrefManager;
+import com.example.findinglogs.model.repo.local.WeatherCacheDataSource;
 import com.example.findinglogs.model.repo.remote.WeatherManager;
 import com.example.findinglogs.model.repo.remote.api.WeatherCallback;
 import com.example.findinglogs.model.util.Logger;
@@ -23,11 +24,13 @@ public class Repository {
 
     private final WeatherManager weatherManager;
     private final SharedPrefManager sharedPrefManagerManager;
+    private final WeatherCacheDataSource weatherCacheDataSource;
 
     public Repository(Application application) {
         if (Logger.ISLOGABLE) Logger.d(TAG, "Repository()");
         weatherManager = new WeatherManager();
         sharedPrefManagerManager = SharedPrefManager.getInstance(application);
+        weatherCacheDataSource = new WeatherCacheDataSource(application);
     }
 
     public void retrieveForecast(String latLon, WeatherCallback callback) {
@@ -41,12 +44,15 @@ public class Repository {
      */
     public RefreshResult refreshWeather() {
         List<Weather> refreshedWeather = new ArrayList<>();
+        List<String> localizations = new ArrayList<>(getLocalizations().values());
 
         try {
-            for (String latLon : getLocalizations().values()) {
+            for (String latLon : localizations) {
                 refreshedWeather.add(weatherManager.retrieveForecastSynchronously(latLon));
             }
 
+            // Repository owns persistence; WorkManager and ViewModel share this path.
+            weatherCacheDataSource.saveWeatherItems(refreshedWeather, localizations);
             saveString(LAST_WEATHER_REFRESH_TIMESTAMP,
                     String.valueOf(System.currentTimeMillis()));
             return RefreshResult.success(refreshedWeather);
