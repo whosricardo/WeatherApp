@@ -11,8 +11,9 @@ import com.example.findinglogs.model.repo.Repository;
 import com.example.findinglogs.model.repo.remote.api.WeatherCallback;
 import com.example.findinglogs.model.util.Logger;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainViewModel extends AndroidViewModel {
 
@@ -24,7 +25,9 @@ public class MainViewModel extends AndroidViewModel {
     private final LiveData<List<Weather>> weatherList = _weatherList;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final ExecutorService refreshExecutor = Executors.newSingleThreadExecutor();
     private final Runnable fetchRunnable = this::fetchAllForecasts;
+    private volatile boolean isCleared = false;
 
     public MainViewModel(Application application) {
         super(application);
@@ -46,35 +49,37 @@ public class MainViewModel extends AndroidViewModel {
     }
 
     private void fetchAllForecasts() {
-        if (Logger.ISLOGABLE) Logger.d(TAG, "fetchAllForecasts()");
-        HashMap<String, String> localizations = mRepository.getLocalizations();
-        List<Weather> updatedList = new ArrayList<>();
-
-        for (String latlon : localizations.values()) {
-            mRepository.retrieveForecast(
-                latlon,
-                new WeatherCallback() {
-                    @Override
-                    public void onSuccess(Weather result) {
-                        updatedList.add(result);
-                        if (updatedList.size() == localizations.size()) {
-                            _weatherList.setValue(updatedList);
-                            handler.postDelayed(fetchRunnable, FETCH_INTERVAL);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(String error) {
-                        handler.postDelayed(fetchRunnable, FETCH_INTERVAL);
-                    }
-                }
-            );
+        if (isCleared) {
+            return;
         }
+
+        if (Logger.ISLOGABLE) Logger.d(TAG, "fetchAllForecasts()");
+
+        // The repository owns data refresh; this ViewModel owns UI state and timing.
+        refreshExecutor.execute(() -> {
+            Repository.RefreshResult result = mRepository.refreshWeather();
+
+            if (isCleared) {
+                return;
+            }
+
+            if (result.getStatus() == Repository.RefreshResult.Status.SUCCESS) {
+                _weatherList.postValue(result.getWeatherItems());
+            } else if (Logger.ISLOGABLE) {
+                Logger.w(TAG, "Weather refresh failed: " + result.getErrorMessage());
+            }
+
+            if (!isCleared) {
+                handler.postDelayed(fetchRunnable, FETCH_INTERVAL);
+            }
+        });
     }
 
     @Override
     protected void onCleared() {
+        isCleared = true;
         handler.removeCallbacks(fetchRunnable);
+        refreshExecutor.shutdownNow();
         super.onCleared();
     }
 

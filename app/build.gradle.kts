@@ -63,4 +63,5 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.logging.interceptor)
     implementation(libs.gson)
+    implementation("androidx.work:work-runtime:2.11.2")
 }

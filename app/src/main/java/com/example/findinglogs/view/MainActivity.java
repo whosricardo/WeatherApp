@@ -15,6 +15,12 @@ import android.widget.EditText;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -25,11 +31,15 @@ import com.example.findinglogs.model.util.Utils;
 import com.example.findinglogs.view.recyclerview.adapter.WeatherListAdapter;
 import com.example.findinglogs.viewmodel.MainViewModel;
 import com.example.findinglogs.service.WeatherMonitoringService;
+import com.example.findinglogs.worker.WeatherRefreshWorker;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String WEATHER_REFRESH_WORK_NAME = "weather_background_refresh";
+    private static final String WEATHER_REFRESH_WORK_TAG = "weather_refresh";
 
     private MainViewModel mainViewModel; // Foi preciso transformar a ViewModel em atributo de classe
     private WeatherListAdapter adapter;
@@ -79,6 +89,10 @@ public class MainActivity extends AppCompatActivity {
                 .observe(this, weathers -> adapter.updateWeathers(weathers));
 
         fetchButton.setOnClickListener(view -> mainViewModel.refreshWeather());
+        fetchButton.setOnLongClickListener(view -> {
+            scheduleWeatherRefreshWork();
+            return true;
+        });
         openBrowserButton.setOnClickListener(view -> openWeatherInBrowser());
         citySearchEditText.setOnEditorActionListener(
                 (view, actionId, event) -> {
@@ -88,6 +102,34 @@ public class MainActivity extends AppCompatActivity {
                     }
                     return false;
                 });
+    }
+
+    /*
+     * MainActivity only schedules the request; WorkManager decides when it can run.
+     * The Worker executes the task, and the repository owns refresh logic.
+     * The ViewModel remains responsible for UI state. The receiver reacts while
+     * this Activity is active, while the foreground service handles ongoing work.
+     */
+    private void scheduleWeatherRefreshWork() {
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+        Data inputData = new Data.Builder()
+                .putString("source", "MainActivity")
+                .build();
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(
+                WeatherRefreshWorker.class)
+                .setConstraints(constraints)
+                .setInputData(inputData)
+                .addTag(WEATHER_REFRESH_WORK_TAG)
+                .build();
+
+        // KEEP prevents repeated long presses from duplicating queued or running refreshes.
+        WorkManager.getInstance(this).enqueueUniqueWork(
+                WEATHER_REFRESH_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                request);
+        Log.d(TAG, "Weather refresh work requested");
     }
 
     // Intent implícita: informamos a ação ACTION_VIEW e a URI.
